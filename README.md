@@ -5,3 +5,5 @@ Demo for sequelize
 npm i
 node index.js
 ```
+
+!['DB Diagram'](?)
