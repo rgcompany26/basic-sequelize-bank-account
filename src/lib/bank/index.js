@@ -1,5 +1,5 @@
 const cuid = require('cuid')
-const moment =  require('moment')
+const moment = require('moment')
 
 const constants = require('./constants')
 
@@ -20,11 +20,11 @@ const setDB = (input) => {
 }
 
 const createTransaction = async ({
-														 ticket,
-														 accountNumber,
-														 transactionType,
-														 amount
-													 }) => {
+																	 ticket,
+																	 accountNumber,
+																	 transactionType,
+																	 amount
+																 }) => {
 	const transaction = await db['transaction'].create({
 		type_id: transactionType,
 		amount,
@@ -88,7 +88,7 @@ const createPersonalAccount = async ({userId}) => {
 	return account.toJSON()
 }
 
-const makeDeposit = async ({accountId, amount, ticket = cuid()}) => {
+const makeDeposit = async ({accountId, amount, ticket = cuid(), type}) => {
 	checkDB()
 	const account = await db['account'].findByPk(accountId)
 	if (!account) {
@@ -97,10 +97,10 @@ const makeDeposit = async ({accountId, amount, ticket = cuid()}) => {
 	await account.update({
 		balance: parseFloat(account['balance']) + Math.abs(amount)
 	})
-	const movement =  await createTransaction({
+	const movement = await createTransaction({
 		ticket,
 		accountNumber: account.id,
-		transactionType: constants.transaction.types.DEPOSIT,
+		transactionType: type ? type : constants.transaction.types.DEPOSIT,
 		amount
 	})
 	return movement
@@ -115,10 +115,10 @@ const makeWithdrawal = async ({accountId, amount, ticket = cuid(), type}) => {
 	await account.update({
 		balance: parseFloat(account['balance']) - Math.abs(amount)
 	})
-	const movement =  await createTransaction({
+	const movement = await createTransaction({
 		ticket,
 		accountNumber: account.id,
-		transactionType: type || constants.transaction.types.WITHDRAWAL,
+		transactionType: type ? type : constants.transaction.types.WITHDRAWAL,
 		amount
 	})
 	return movement
@@ -133,8 +133,10 @@ const makeHaircut = async ({
 													 }) => {
 	const ticket = cuid()
 	const totalAmount = Math.abs(cost) + Math.abs(tip)
-	await makeWithdrawal({accountId: customerAccountId, amount: totalAmount, ticket, type:
-		constants.transaction.types.BARBER_SERVICE_PAYMENT})
+	await makeWithdrawal({
+		accountId: customerAccountId, amount: totalAmount, ticket,
+		type: constants.transaction.types.BARBER_SERVICE_PAYMENT
+	})
 	await makeDeposit({accountId: barberShopAccountId, amount: Math.abs(cost), ticket})
 	await makeDeposit({accountId: barberAccountId, amount: Math.abs(tip), ticket})
 	return {
@@ -144,14 +146,47 @@ const makeHaircut = async ({
 }
 
 const makeRefund = async ({
-														ticket
-													 }) => {
-	await makeWithdrawal({accountId: customerAccountId, amount: totalAmount, ticket})
-	await makeWithdrawal({accountId: customerAccountId, amount: totalAmount, ticket})
-	await makeDeposit({accountId: barberAccountId, amount: Math.abs(tip), ticket})
+														ticket,
+														destinationAccountId
+													}) => {
+	let [transaction1, transaction2] = await db['log_on_transaction'].findAll({
+		where: {
+			ticket,
+			transaction_type: constants.transaction.types.DEPOSIT
+		},
+		order: [
+			['id', 'DESC']
+		],
+		limit: 2,
+		raw: true,
+		nest: true
+	})
+	const refundTicket = cuid()
+	let totalRefundAmount = 0
+	if (transaction1 && transaction2) {
+		await makeWithdrawal({
+			accountId: transaction1['account_number'],
+			amount: transaction1['amount'],
+			ticket: refundTicket,
+			type: constants.transaction.types.REFUND
+		})
+		await makeWithdrawal({
+			accountId: transaction2['account_number'],
+			amount: transaction2['amount'],
+			ticket: refundTicket,
+			type: constants.transaction.types.REFUND
+		})
+		totalRefundAmount = Math.abs(transaction1['amount']) + Math.abs(transaction2['amount'])
+		await makeDeposit({
+			accountId: destinationAccountId,
+			amount: totalRefundAmount,
+			ticket: refundTicket,
+			type: constants.transaction.types.REFUND
+		})
+	}
 	return {
-		ticket,
-		refunded: totalAmount
+		ticket: refundTicket,
+		refunded: totalRefundAmount
 	}
 }
 
@@ -202,5 +237,6 @@ module.exports = {
 	makeTransfer,
 	makeHaircut,
 	getAccount,
-	getAccountHistory
+	getAccountHistory,
+	makeRefund
 }

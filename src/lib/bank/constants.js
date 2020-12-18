@@ -30,23 +30,23 @@ module.exports = {
 		transactionType: (typeNumber) => {
 			let code = 'INVALID'
 			switch (typeNumber) {
-				case '1': {
+				case 1: {
 					code = 'REFUND'
 					break
 				}
-				case '2': {
+				case 2: {
 					code = 'BARBER_SERVICE_PAYMENT'
 					break
 				}
-				case '3': {
+				case 3: {
 					code = 'TIP'
 					break
 				}
-				case '4': {
+				case 4: {
 					code = 'DEPOSIT'
 					break
 				}
-				case '5': {
+				case 5: {
 					code = 'WITHDRAWAL'
 				}
 			}

@@ -33,7 +33,7 @@ const hairCut1Cost = 30
 	`
 	await manager.makeDeposit({accountId: accountUserA.id, amount: depositAmount1})
 
-	accountUserA = await manager.getAccount({ accountId: accountUserA.id })
+	accountUserA = await manager.getAccount({accountId: accountUserA.id})
 
 	summary += `
 	***
@@ -52,7 +52,7 @@ const hairCut1Cost = 30
 	`
 	await manager.makeDeposit({accountId: accountUserB.id, amount: depositAmount2})
 
-	accountUserB = await manager.getAccount({ accountId: accountUserB.id })
+	accountUserB = await manager.getAccount({accountId: accountUserB.id})
 
 	summary += `
 	***
@@ -66,8 +66,8 @@ const hairCut1Cost = 30
 		amount: transferAmount1
 	})
 
-	accountUserA = await manager.getAccount({ accountId: accountUserA.id })
-	accountUserB = await manager.getAccount({ accountId: accountUserB.id })
+	accountUserA = await manager.getAccount({accountId: accountUserA.id})
+	accountUserB = await manager.getAccount({accountId: accountUserB.id})
 
 	summary += `
 	***
@@ -86,7 +86,7 @@ const hairCut1Cost = 30
 		cost: hairCut1Cost
 	})
 
-	accountUserB = await manager.getAccount({ accountId: accountUserB.id })
+	accountUserB = await manager.getAccount({accountId: accountUserB.id})
 
 	summary += `
 	***
@@ -102,8 +102,8 @@ const hairCut1Cost = 30
 	Account number: ${accountUserB.id}
 	`
 
-	let accountBarberShop = await manager.getAccount({ accountId: store.barbershopAccount.id })
-	let accountBarber = await manager.getAccount({ accountId: store.barberAccount.id })
+	let accountBarberShop = await manager.getAccount({accountId: store.barbershopAccount.id})
+	let accountBarber = await manager.getAccount({accountId: store.barberAccount.id})
 
 	summary += `
 	***
@@ -113,14 +113,38 @@ const hairCut1Cost = 30
 	Barber balance: ${accountBarber.balance}
 	`
 
-	let history = await manager.getAccountHistory({
+	let refund = await manager.makeRefund({
+		ticket: transaction.ticket,
+		destinationAccountId: accountUserB.id
+	})
+
+	summary += `
+	***
+	REFUND
+	${JSON.stringify(refund, null, 2)}
+	`
+
+	history = await manager.getAccountHistory({
 		accountId: accountUserB.id
 	})
 
-	console.log('history', history)
+	summary += `
+$$$$$$$$$$$$$$$$$$$$$$$
+HISTORY
+${JSON.stringify(history, null, 2)}
+`
 
-	// console.log('---SUMMARY---')
-	// console.log(summary)
-	// console.log('---SUMMARY:END---')
+	accountUserB = await manager.getAccount({accountId: accountUserB.id})
+
+	summary += `
+	***
+	User B account number: ${accountUserA.id}
+	User B balance: ${accountUserB.balance}
+	`
+
+	console.log('---SUMMARY---')
+	console.log(summary)
+	console.log('---SUMMARY:END---')
+
 	process.exit(0)
 })()
