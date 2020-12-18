@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 
-const DIR = path.join(__dirname+'/models')
+const DIR = path.join(__dirname + '/models')
 
 const {
     DB_HOST,

@@ -1,7 +1,7 @@
 module.exports = {
     account: {
         types: {
-            BUSINESS:1,
+            BUSINESS: 1,
             PERSONAL: 2
         }
     },

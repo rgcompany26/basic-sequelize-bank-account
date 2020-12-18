@@ -32,7 +32,9 @@ const init = async () => {
             "ssl": {
                 "require": true,
                 "rejectUnauthorized": false
-            }
+            },
+            // https://github.com/sequelize/sequelize/issues/8019
+            decimalNumbers: true
         }
     })
     try {
@@ -48,16 +50,16 @@ const init = async () => {
         const user = _user(sequelize, DataTypes);
         const user_role = _user_role(sequelize, DataTypes);
 
-        account.belongsTo(account_type, { foreignKey: "account_type_id"});
-        account_type.hasMany(account, { foreignKey: "account_type_id"});
-        account.belongsTo(user, { foreignKey: "user_id"});
-        user.hasMany(account, { foreignKey: "user_id"});
-        log_on_transaction.belongsTo(transaction, { foreignKey: "transaction_id"});
-        transaction.hasMany(log_on_transaction, { foreignKey: "transaction_id"});
-        transaction.belongsTo(transaction_type, { foreignKey: "type_id"});
-        transaction_type.hasMany(transaction, { foreignKey: "type_id"});
-        user.belongsTo(user_role, { foreignKey: "user_role_id"});
-        user_role.hasMany(user, { foreignKey: "user_role_id"});
+        account.belongsTo(account_type, {foreignKey: "account_type_id"});
+        account_type.hasMany(account, {foreignKey: "account_type_id"});
+        account.belongsTo(user, {foreignKey: "user_id"});
+        user.hasMany(account, {foreignKey: "user_id"});
+        log_on_transaction.belongsTo(transaction, {foreignKey: "transaction_id"});
+        transaction.hasMany(log_on_transaction, {foreignKey: "transaction_id"});
+        transaction.belongsTo(transaction_type, {foreignKey: "type_id"});
+        transaction_type.hasMany(transaction, {foreignKey: "type_id"});
+        user.belongsTo(user_role, {foreignKey: "user_role_id"});
+        user_role.hasMany(user, {foreignKey: "user_role_id"});
 
         return {
             account,
