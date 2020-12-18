@@ -1,8 +1,7 @@
 const cuid = require('cuid')
+const moment =  require('moment')
 
 const constants = require('./constants')
-
-const { HAIR_CUT } = constants.cost
 
 let db
 
@@ -129,7 +128,7 @@ const makeHaircut = async ({
 														 customerAccountId,
 														 barberShopAccountId,
 														 barberAccountId,
-														 cost = HAIR_CUT,
+														 cost,
 														 tip
 													 }) => {
 	const ticket = cuid()
@@ -137,6 +136,22 @@ const makeHaircut = async ({
 	await makeWithdrawal({accountId: customerAccountId, amount: totalAmount, ticket})
 	await makeDeposit({accountId: barberShopAccountId, amount: Math.abs(cost), ticket})
 	await makeDeposit({accountId: barberAccountId, amount: Math.abs(tip), ticket})
+	return {
+		ticket,
+		paid: totalAmount
+	}
+}
+
+const makeRefund = async ({
+														ticket
+													 }) => {
+	await makeWithdrawal({accountId: customerAccountId, amount: totalAmount, ticket})
+	await makeWithdrawal({accountId: customerAccountId, amount: totalAmount, ticket})
+	await makeDeposit({accountId: barberAccountId, amount: Math.abs(tip), ticket})
+	return {
+		ticket,
+		refunded: totalAmount
+	}
 }
 
 const makeTransfer = async ({originAccountId, destinationAccountId, amount}) => {
@@ -153,6 +168,29 @@ const getAccount = async ({accountId}) => {
 	return account.toJSON()
 }
 
+const getAccountHistory = async ({accountId}) => {
+	checkDB()
+	let history = await db['log_on_transaction'].findAll({
+		where: {
+			account_number: accountId
+		},
+		order: [
+			['id', 'DESC']
+		],
+		raw: true,
+		nest: true
+	})
+	history = history.map((movement) => {
+		return {
+			ticket: movement.ticket,
+			date: moment(movement['created_at']).format('LLLL'), // Monday, June 9 2014 9:32 PM
+			amount: movement.amount,
+			type: constants.parse.transactionType(movement['transaction_type'])
+		}
+	})
+	return history
+}
+
 module.exports = {
 	setDB,
 	createUser,
@@ -162,5 +200,6 @@ module.exports = {
 	makeWithdrawal,
 	makeTransfer,
 	makeHaircut,
-	getAccount
+	getAccount,
+	getAccountHistory
 }
