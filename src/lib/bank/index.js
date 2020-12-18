@@ -106,7 +106,7 @@ const makeDeposit = async ({accountId, amount, ticket = cuid()}) => {
 	return movement
 }
 
-const makeWithdrawal = async ({accountId, amount, ticket = cuid()}) => {
+const makeWithdrawal = async ({accountId, amount, ticket = cuid(), type}) => {
 	checkDB()
 	const account = await db['account'].findByPk(accountId)
 	if (!account) {
@@ -118,7 +118,7 @@ const makeWithdrawal = async ({accountId, amount, ticket = cuid()}) => {
 	const movement =  await createTransaction({
 		ticket,
 		accountNumber: account.id,
-		transactionType: constants.transaction.types.WITHDRAWAL,
+		transactionType: type || constants.transaction.types.WITHDRAWAL,
 		amount
 	})
 	return movement
@@ -133,7 +133,8 @@ const makeHaircut = async ({
 													 }) => {
 	const ticket = cuid()
 	const totalAmount = Math.abs(cost) + Math.abs(tip)
-	await makeWithdrawal({accountId: customerAccountId, amount: totalAmount, ticket})
+	await makeWithdrawal({accountId: customerAccountId, amount: totalAmount, ticket, type:
+		constants.transaction.types.BARBER_SERVICE_PAYMENT})
 	await makeDeposit({accountId: barberShopAccountId, amount: Math.abs(cost), ticket})
 	await makeDeposit({accountId: barberAccountId, amount: Math.abs(tip), ticket})
 	return {
