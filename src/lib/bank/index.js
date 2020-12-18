@@ -1,4 +1,8 @@
+const cuid = require('cuid')
+
 const constants = require('./constants')
+
+const { HAIR_CUT } = constants.cost
 
 let db
 
@@ -14,7 +18,30 @@ const errorAccountNotFound = () => {
 
 const setDB = (input) => {
 	db = input
+}
 
+const createTransaction = async ({
+														 ticket,
+														 accountNumber,
+														 transactionType,
+														 amount
+													 }) => {
+	const transaction = await db['transaction'].create({
+		type_id: transactionType,
+		amount,
+		ticket
+	})
+	const transactionLog = await db['log_on_transaction'].create({
+		ticket,
+		account_number: accountNumber,
+		transaction_id: transaction.id,
+		transaction_type: transactionType,
+		amount
+	})
+	return {
+		transaction: transaction.toJSON(),
+		log: transactionLog.toJSON()
+	}
 }
 
 const createUser = async () => {
@@ -26,7 +53,7 @@ const createUser = async () => {
 }
 
 
-const createBarber = async () => {
+const setupBarberShop = async () => {
 	checkDB()
 	const userBarberShop = await db['user'].create({
 		user_role: constants.user.types.BARBERSHOP_REPRESENTATIVE
@@ -37,16 +64,18 @@ const createBarber = async () => {
 		balance: 0
 	})
 	const userBarber = await db['user'].create({
-		user_role: constants.user.types.BARBERSHOP_REPRESENTATIVE
+		user_role: constants.user.types.BARBER
 	})
 	const accountBarber = await db['account'].create({
-		user_id: user.id,
-		account_type_id: constants.account.types.BUSINESS,
+		user_id: userBarber.id,
+		account_type_id: constants.account.types.BARBER,
 		balance: 0
 	})
 	return {
-		barbershopUser: user.toJSON(),
-		barbershopAccount: account.toJSON()
+		barbershopUser: userBarberShop.toJSON(),
+		barbershopAccount: accountBarberShop.toJSON(),
+		barberUser: userBarber.toJSON(),
+		barberAccount: accountBarber.toJSON()
 	}
 }
 
@@ -60,7 +89,7 @@ const createPersonalAccount = async ({userId}) => {
 	return account.toJSON()
 }
 
-const makeDeposit = async ({accountId, amount}) => {
+const makeDeposit = async ({accountId, amount, ticket = cuid()}) => {
 	checkDB()
 	const account = await db['account'].findByPk(accountId)
 	if (!account) {
@@ -69,10 +98,16 @@ const makeDeposit = async ({accountId, amount}) => {
 	await account.update({
 		balance: parseFloat(account['balance']) + Math.abs(amount)
 	})
-	return account.toJSON()
+	const movement =  await createTransaction({
+		ticket,
+		accountNumber: account.id,
+		transactionType: constants.transaction.types.DEPOSIT,
+		amount
+	})
+	return movement
 }
 
-const makeWithdrawal = async ({accountId, amount}) => {
+const makeWithdrawal = async ({accountId, amount, ticket = cuid()}) => {
 	checkDB()
 	const account = await db['account'].findByPk(accountId)
 	if (!account) {
@@ -81,7 +116,27 @@ const makeWithdrawal = async ({accountId, amount}) => {
 	await account.update({
 		balance: parseFloat(account['balance']) - Math.abs(amount)
 	})
-	return account.toJSON()
+	const movement =  await createTransaction({
+		ticket,
+		accountNumber: account.id,
+		transactionType: constants.transaction.types.WITHDRAWAL,
+		amount
+	})
+	return movement
+}
+
+const makeHaircut = async ({
+														 customerAccountId,
+														 barberShopAccountId,
+														 barberAccountId,
+														 cost = HAIR_CUT,
+														 tip
+													 }) => {
+	const ticket = cuid()
+	const totalAmount = Math.abs(cost) + Math.abs(tip)
+	await makeWithdrawal({accountId: customerAccountId, amount: totalAmount, ticket})
+	await makeDeposit({accountId: barberShopAccountId, amount: Math.abs(cost), ticket})
+	await makeDeposit({accountId: barberAccountId, amount: Math.abs(tip), ticket})
 }
 
 const makeTransfer = async ({originAccountId, destinationAccountId, amount}) => {
@@ -101,10 +156,11 @@ const getAccount = async ({accountId}) => {
 module.exports = {
 	setDB,
 	createUser,
-	createBarber,
+	setupBarberShop,
 	createPersonalAccount,
 	makeDeposit,
 	makeWithdrawal,
 	makeTransfer,
+	makeHaircut,
 	getAccount
 }
