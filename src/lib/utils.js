@@ -1,7 +1,7 @@
 module.exports = {
-    debug: (...input) => {
-        if (process.env.LOGS) {
-            console.log(input)
-        }
-    }
+	debug: (...input) => {
+		if (process.env.LOGS) {
+			console.log(input)
+		}
+	}
 }
